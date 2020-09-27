@@ -1,0 +1,862 @@
+* Packages
+Use 'straight-use-package' to manage packages by creating a list of packages 
+that need to be loaded, and then use straight-use-package to maintain them
+
+#+BEGIN_SRC emacs-lisp
+  (defvar dpy-package-list '(
+                             all-the-icons
+                             ample-theme
+                             avy
+                             beacon
+                             company
+                             company-lsp
+                             counsel
+                             dash
+                             dash-functional
+                             delight
+                             diredfl
+                             dired-filter
+                             dired-rainbow
+                             doom-modeline
+                             eglot
+                             es-mode
+                             exec-path-from-shell
+                             flycheck
+                             gcmh
+                             go-mode
+                             highlight-numbers
+                             highlight-escape-sequences
+                             ivy
+                             ivy-rich
+                             lsp-ivy
+                             lsp-mode
+                             lsp-ui
+                             magit
+                             no-littering
+                             nimbus-theme
+                             org
+                             org-bullets
+                             projectile
+                             ripgrep
+                             smartparens
+                             swiper
+                             switch-window
+                             undo-tree
+                             which-key
+                             ws-butler
+                             )
+  )
+  (dolist (p dpy-package-list)
+    (straight-use-package p))
+#+END_SRC
+
+* Base Modifications
+These are modifications to base-emacs because, let's face it, emacs out of the box is pretty unusuable
+** Personal Information
+#+BEGIN_SRC emacs-lisp
+(defvar user-email-address)
+(defvar user-full-name)
+
+(setq user-full-name "Dan Baggeroer"
+      user-email-address "dbaggero@protonmail.com")
+(message "Personal Info Completed")
+#+END_SRC
+
+** Garbage Collection (GC)
+Garbage collection ahs always been a debated topic. This supposedly helps handle things by determing the optimal value dynamically
+#+BEGIN_SRC emacs-lisp
+(use-package gcmh
+  :demand t
+  :init
+  (setq gcmh-verbose                    t
+        gcmh-lows-cons-threshold #x800000
+        gcmh-high-cons-threshold #x800000
+        gcmh-idle-delay              300)
+  :config
+  (gcmh-mode))
+(message "GC Completed")
+#+END_SRC
+** Define Constants
+#+BEGIN_SRC emacs-lisp
+  (defconst *is-a-gui*
+    (display-blink-cursor-p)
+    "Are we using a gui?")
+
+  (defconst *is-a-mac*
+    (eq system-type 'darwin)
+    "Are we on a mac?")
+
+  (defconst *is-a-windows*
+    (eq system-type 'windows-nt)
+    "Are we running windows? Gods, help us!")
+
+  (defconst *is-a-linux*
+    (eq system-type 'gnu/linux)
+    "Are we running Linux?")
+
+  (defconst *is-root*
+    (string-equal "root" (getenv "USER"))
+    "Are you ROOT?!")
+
+  (defconst *rg*
+    (executable-find "rg")
+    "Do we have ripgrep?")
+
+  (defconst *python*
+    (executable-find "python")
+    "Do we have python?")
+
+  (defconst *python3*
+    (executable-find "python3")
+    "Do we have python3?")
+
+  (defconst *mvn*
+    (executable-find "mvn")
+    "Do we have Maven?")
+
+  (defconst *gcc*
+    (executable-find "gcc")
+    "Do we have gcc?")
+
+  (defconst *git*
+    (executable-find "git")
+    "Do we have git?")
+
+  (defconst *pdflatex*
+    (executable-find "pdflatex")
+    "Do we have pdflatex?")
+
+
+#+END_SRC
+
+** No Littering
+This is a package that helps with emacs' tendancy to splatter backup files and conf files and such all over the emacs directory structure.
+#+BEGIN_SRC emacs-lisp
+(use-package no-littering
+  :config
+  (setq auto-save-file-name-transforms
+        `((".*" , (no-littering-expand-var-file-name "auto-save/") t)))
+  (setq custom-file (no-littering-expand-etc-file-name "custom.el")))
+#+END_SRC
+** Global Keybindings
+#+BEGIN_SRC emacs-lisp
+(defun dpy/config-edit ()
+  "Go directly to the main configuration file."
+  (interactive)
+  (find-file (concat user-emacs-directory "config.org")))
+
+(defun dpy/config-reload ()
+  "Reload the main configuration file without having to restart Emacs"
+  (interactive)
+  (message "*** RELOAD ***")
+  (org-babel-load-file (expand-file-name (concat user-emacs-directory "config.org"))))
+
+	 (global-unset-key (kbd "C-x ;"))
+	 (global-unset-key (kbd "C-x f"))
+	 (global-set-key (kbd "C-c r") 'dpy/config-reload)
+	 (global-set-key (kbd "C-c e") 'dpy/config-edit)
+	 (global-set-key (kbd "C-:") 'toggle-truncate-lines)
+	 (global-set-key (kbd "C-x k") #'kill-this-buffer)
+	 (global-set-key (kbd "C-+")   'text-scale-increase)
+	 (global-set-key (kbd "C--")   'text-scale-decrease)
+	 (global-set-key (kbd "C-x g") 'magit-status)
+	 (global-set-key (kbd "C-c a") 'org-agenda)
+	 (global-set-key (kbd "C-c c") 'org-capture)
+	 (global-set-key (kbd "<f5>") 'mu4e)
+	 (global-set-key (kbd "RET") 'newline-and-indent)
+
+(message "Global Keys Completed")
+#+END_SRC
+
+** UTF-8
+Until such time it becomes default:
+#+BEGIN_SRC emacs-lisp
+(defvar set-charset-priority)
+
+(set-charset-priority          'unicode)
+(setq locale-coding-system     'utf-8)
+(set-terminal-coding-system    'utf-8)
+(set-keyboard-coding-system    'utf-8)
+(set-selection-coding-system   'utf-8)
+(prefer-coding-system          'utf-8)
+(setq default-process-coding-system '(utf-8-unix . utf-8-unix))
+
+(message "UTF-8 completed")
+#+END_SRC
+** System Tweaks
+#+BEGIN_SRC emacs-lisp
+(setq config-nonexistent-file-or-buffer nil)  ; just go already
+(setq save-interprogram-paste-before-kill t)  ; save existing clipboard to killring before replacing it
+(setq require-final-newline               t)  ; if there isn't one, add a newline at the end
+(setq inhibit-startup-message             t)  ; I know what emacs is
+(setq ring-bell-function            'ignore)  ; Don't Ever Beep. Just Don't Do It.
+(setq visible-bell                      nil)  ; Don't. Ever. Flash.
+(setq kill-do-not-save-duplicates         t)  ; Just what it says
+(setq confirm-kill-process              nil)  ; don't bother
+(random                    t) ; initialize RNG
+(delete-selection-mode     1) ; if something is highlighted and I start typing, delete it
+(transient-mark-mode       t) ; if switching buffers, disable former buffer's mark
+(global-auto-revert-mode)
+(fset 'yes-or-no-p 'y-or-n-p) ; everyone hates that
+(setq-default find-file-visit-truename t) ; follow symlinks automagically
+(setq-default vc-follow-symlinks       t) ; same for git
+(defalias 'list-buffers 'ibuffer-other-window)
+#+END_SRC
+
+** Exec-Path-From-Shell
+Exec-path-from-shell is a nifty package that takes the hassle out of importing Environment variables into emacs. Check the documentation, but basically exec-path-from-shell-copy-env will bring in any variables you want.
+#+BEGIN_SRC emacs-lisp
+  (use-package exec-path-from-shell
+    :config
+    ;; Go and python are the big ones at the moment
+    (when (memq window-system '(darwin ns mac))
+      (setq exec-path-from-shell-check-startup-files nil)
+      (exec-path-from-shell-copy-env "GOPATH")
+      (exec-path-from-shell-copy-env "PYTHONPATH")
+      (exec-path-from-shell-initialize)
+      '(exec-path-from-shell-check-startup-files nil)))
+
+  (message "Exec Path Completed")
+#+END_SRC
+** Frame Size and Position
+I frequently swap between the laptop and a 34" desktop monitor. The size of the viewing area should determine the size of the frames. Plus I hate it when it starts right up against the left bezel of the monitor. Now laptops are typically around 900 pixels tall (unless you have a super duper ultra high resolution monitor, and if so, bully for you!) So tweak the number below so anything bigger than that , make the width and height larger... yada yada. YMMV
+#+begin_src emacs-lisp
+  (if (> (display-pixel-height) 900) ;; <== play with this number until you get what you want
+      (setq default-frame-alist '((width . 210) (height . 80)))
+    (setq default-frame-alist '((width . 80) (height . 66))))
+  (setq initial-frame-alist '((top . 15) (left . 15)))
+(message "Frame Size Completed")
+#+end_src
+
+* Appearance
+** Bar Modifications
+I like to keep the menu bar around due to the dynamic aspect. Otherwise, get rid of them.
+#+BEGIN_SRC emacs-lisp
+(when (fboundp 'tool-bar-mode)
+  (tool-bar-mode -1))
+(when (fboundp 'scroll-bar-mode)
+  (scroll-bar-mode -1))
+(message "Bar Mode Completed")
+#+END_SRC
+** Line Numbering
+#+begin_src emacs-lisp
+(when (not (line-number-mode 1))
+  (line-number-mode 1))
+(when (not (column-number-mode 1))
+  (column-number-mode 1))
+(line-number-display-width 5)
+(global-display-line-numbers-mode)
+(message "Line Numbering Completed")
+#+end_src
+
+** Cursor
+#+begin_src emacs-lisp
+(when (display-blink-cursor-p)
+  (setq-default cursor-type 'box)
+  (blink-cursor-mode (- (*) (*) (*))))
+
+;; Depending on the mode, let's change the cursor
+(defvar dpy/read-only-color       "red")
+(defvar dpy/read-only-cursor-type 'hbar)
+(defvar dpy/normal-color         "grey")
+(defvar dpy/normal-cursor-type     'box)
+
+(defun dpy/set-cursor-according-to-mode ()
+  "change the cursor color and type according to some minor modes."
+  (cond
+    (buffer-read-only
+      (set-cursor-color dpy/read-only-color)
+      (setq cursor-type dpy/read-only-cursor-type))
+    (t
+      (set-cursor-color dpy/normal-color)
+      (setq cursor-type dpy/normal-cursor-type))))
+
+(add-hook 'post-command-hook 'dpy/set-cursor-according-to-mode)
+(message "Cursor Mode Completed")
+#+end_src
+** Themes
+Like the weather, themes constantly change. Currently I'm fond of...
+#+begin_src emacs-lisp
+  (setq custom-safe-themes t)
+  (use-package ample-theme
+    :init
+    (progn
+      (load-theme 'ample t t)
+      (load-theme 'ample-flat t t)
+      (load-theme 'ample-light t t)
+      ;; choose one ample to enable
+      (enable-theme 'ample)))
+
+  (message "Themes Completed")
+#+end_src
+** Mode Line
+A combonation of eye candy and functionality. Not sure where one starts, and the other ends...
+#+begin_src emacs-lisp
+  (use-package all-the-icons)
+  (use-package doom-modeline
+    :hook (after-init . doom-modeline-mode)
+    :config
+    (setq doom-modeline-icon (display-graphic-p)
+          doom-modeline-major-mode-color-icon  t
+          doom-modeline-minor-modes            t
+          doom-modeline-unicode-fallback       t
+          doom-modeline-buffer-encoding      nil
+          doom-modeline-lsp                    t
+          doom-modeline-mu4e                   t
+          doom-modeline-env-version            t))
+  (message "Mode Line Completed")
+#+end_src
+** Fonts
+#+begin_src emacs-lisp
+      (when *is-a-mac*
+        (progn
+          (set-face-attribute 'default nil :height 130 :weight 'normal :family "Cascadia Code PL")
+          (message "Font set to Cascadia")))
+
+      (when *is-a-linux*
+        (progn
+          (set-face-attribute 'default nil :height 130 :weight 'normal :family "SauceCodePro Nerd Font Mono")
+          (message "Font set to SauceCodePro")))
+
+      ;; this is a ligiture thing...
+      (if (fboundp 'mac-auto-operator-composition-mode)
+          (mac-auto-operator-composition-mode))
+
+      ;; kinda stupid not to take advantage of the advanced font features where available
+
+    (defun dpy/push-to-prettify-alist ()
+      "Push a bunch of symbols to the prettify alist."
+      (push '("!="     . ?≠) prettify-symbols-alist)
+      (push '("<="     . ?≤) prettify-symbols-alist)
+      (push '(">="     . ?≥) prettify-symbols-alist)
+      (push '("=>"     . ?⇒) prettify-symbols-alist)
+      (push '("<="     . ?⇐) prettify-symbols-alist)
+      (push '("sum"    . ?Σ) prettify-symbols-alist)
+      (push '("**2"    . ?²) prettify-symbols-alist)
+      (push '("**3"    . ?³) prettify-symbols-alist)
+      (push '("None"   . ?∅) prettify-symbols-alist)
+      (push '("pi"     . ?π) prettify-symbols-alist)
+      (push '("lambda" . ?λ) prettify-symbols-alist))
+    (add-hook 'after-init-hook (lambda ()
+                                #'dpy/push-to-prettify-alist))
+    (add-hook 'prog-mode-hook #'prettify-symbols-mode)
+    (add-hook 'org-mode-hook  #'prettify-symbols-mode)
+
+  (message "Fonts Completed")
+
+#+end_src
+** Delight
+Delight, Diminish, Minions kinda all serve the same purpose: ditch or minimize the impact of minor modes on the mode line:
+#+begin_src emacs-lisp
+  (use-package delight
+    :config
+      (delight '((emacs-lisp "𝐸𝐿𝐼𝑆𝑃" :major)
+               (python-mode "𝑃𝑌𝑇𝐻𝑂𝑁" :major)
+               (lisp-interaction-mode "𝐿𝐼" :major)
+               (go-mode "𝐺𝑂" :major)
+               (org-mode "𝑂𝑅𝐺" :major)
+               (help-mode "𝐻𝐸𝐿𝑃" :major)
+               (es-mode "𝐸𝑆" :major)
+               (projectile-mode " 𝑝𝑟𝑜𝑗"projectile) ;;  
+               (company-box-mode nil  company-box)
+               (IBuffer " 𝑖𝑏𝑢𝑓𝑓" ibuffer)
+               (ivy-mode " 𝑖𝑣𝑦" ivy)  ;;
+               (ws-butler-mode " 𝑤𝑠" ws-butler)
+               (flycheck-mode " ✔" flycheck)
+               (flyspell-mode " 𝑆𝑃" flyspell)
+               (company-mode " Ⓒ" company)
+               (elpy-mode " 𝑒𝑙𝑝𝑦" elpy)
+               (gcmh-mode " 𝐺𝐶" gcmh)
+               (undo-tree-mode " 𝑢𝑑𝑡" undo-tree)
+               (dashboard-mode nil dashboard)
+               (which-key-mode nil which-key))))
+
+  (message "Delight Completed")
+#+end_src
+** Kill buffer
+This is a customization to NOT kill the scratch buffer by accident
+#+begin_src emacs-lisp
+  (defadvice kill-buffer (around kill-buffer-around-advice activate)
+    "don't kill `scratch', just bury it"
+    (let ((buffer-to-kill (ad-get-arg 0)))
+      (if (equal buffer-to-kill "*scratch*")
+          (bury-buffer)
+        ad-do-it)))
+
+  (message "Kill buffer Completed")
+#+end_src
+
+* Navigation
+** Beacon
+Beacon is an awesome itsy package that simply highlights the current row when you switch windows/frames:
+#+begin_src emacs-lisp
+  (use-package beacon
+    :config
+    (setq beacon-color  "#ff8c00")
+    (setq beacon-blink-duration 0.2)
+    (setq beacon-size   35)
+    (setq beacon-blink-delay 0.3))
+
+  (beacon-mode 1)
+#+end_src
+** Counsel/Ivy/Swiper/Avy
+#+begin_src emacs-lisp
+  (use-package counsel)
+  (use-package ivy)
+  (use-package swiper
+    :bind (("C-s"        . swiper)
+           ("M-x"        . counsel-M-x)
+           ("C-x C-f"    . counsel-find-file)
+           ("C-x b"      . ivy-switch-buffer)
+           ([remap-describe-function] . counsel-describe-function)
+           ([remap-describe-variable] . counsel-describe-variable))
+    :config
+    (progn
+      (ivy-mode 1)
+      (setq ivy-use-virtual-buffers t
+            enable-recursive-minibuffers t
+            ivy-count-format "%d/%d "
+            projectile-completion-system 'ivy
+            counsel-grep-base-command "rg -i -M 120 --no-heading --line-number -- color never %s %s"
+            counsel-find-file-ignore-regexp (rx (or (group string-start (char ".#"))
+                                                    (group (char "~#") string-end)
+                                                    (group ".elc" string-end)
+                                                    (group ".pyc" string-end))))))
+
+  (use-package ivy-rich
+    :after (ivy all-the-icons)
+    :init
+    ;; define function for getting the icon
+    (defun ivy-rich-switch-buffer-icon (candidate)
+      (with-current-buffer (get-buffer candidate)
+        (let ((icon (all-the-icons-icon-for-mode major-mode)))
+          (if (symbolp icon)
+              (all-the-icons-icon-for-mode 'fundamental-mode)
+            icon))))
+
+    ;; redefining this here to change the switch-buffer widths; better max lengths
+    ;; for my screen
+    (setq-default
+     ivy-rich-display-transformers-list
+     '(ivy-switch-buffer
+       (:columns
+        ((ivy-rich-switch-buffer-icon (:width 4))
+         ;; return the candidate itself
+         (ivy-rich-candidate (:width 40))
+         ;; return the buffer size
+         (ivy-rich-switch-buffer-size (:width 7))
+         ;; return the buffer indicators
+         (ivy-rich-switch-buffer-indicators
+          (:width 4 :face error :align right))
+         ;; return the majro mode info
+         (ivy-rich-switch-buffer-project (:width 20 :face warning))
+         ;; return project name using `projectile'
+         (ivy-rich-switch-buffer-project (:width 25 :face success))
+         ;; return file path relative to project root or
+         ;; `default-directory' if project is nil
+         (ivy-rich-switch-buffer-path
+          (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path
+                          x (ivy-rich-minibuffer-width 0.3))))))
+        :predicate
+        (lambda (cand) (get-buffer cand)))
+
+     counsel-M-x
+     (:columns
+      ;; the original transformer
+      ((counsel-M-x-transformer (:width 40))
+       ;; return the docstring of the command
+       (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
+
+     counsel-describe-function
+     (:columns
+      ;; the original transformer
+      ((counsel-describe-function-transformer (:width 40))
+       ;; return the docstring of the function
+       (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
+
+     counsel-describe-variable
+     (:columns
+      ;; the original transformer
+      ((counsel-describe-variable-transformer (:width 40))
+       ;; return the docstring of the variable
+       (ivy-rich-counsel-docstring (:face font-lock-doc-face))))
+
+     counsel-recentf
+     (:columns
+      ;; return the canidate itself
+      ((ivy-rich-canidate (:width 0.8))
+       ;; return the lats modified time of the file
+       (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))))
+
+    (setq-default ivy-rich-path-style 'abbreviate)
+
+    :config
+    (ivy-rich-mode))
+
+  (use-package avy
+    :bind ("M-s" . avy-goto-char))
+#+end_src
+** Grep
+Use Ripgrep - best out there at this time
+#+begin_src emacs-lisp
+  (use-package ripgrep
+    :commands ripgrep-regexp
+    :if (executable-find "rg"))
+  (message "Ripgrep completed")
+#+end_src
+** Switch Window
+A couple of custom functions to have to cursor follow when you open a new window + switch window which allows you to choose a character instead of having to C-o your way through all open windows.
+#+begin_src emacs-lisp
+  (defun dpy/split-and-follow-vertically ()
+    "Split the window vertically and have the mark follow."
+    (interactive)
+    (split-window-right)
+    (balance-windows)
+    (other-window 1))
+
+  (defun dpy/split-and-follow-horizontally ()
+    "Split the window horizontally and have the mark follow."
+    (interactive)
+    (split-window-below)
+    (balance-windows)
+    (other-window 1))
+
+  (use-package switch-window
+    :config
+    (setq-default switch-window-timeout 10)      ; wait 10 seconds, then revert
+    (setq switch-window-shortcut-style 'qwerty)  ; label windows with homebase char
+    (setq switch-window-minibuffer-shortcut ?z)  ; reserve "z" for mini-buffer
+    (setq switch-window-qwerty-shortcuts '("a" "s" "d" "f" "j" "k" "l"))
+    ;; Icons from https://www.techonthenet.com/clipart/keyboard/
+    (setq switch-window-image-directory (concat user-emacs-directory "images/"))
+    (setq switch-window-shortcut-appearance 'image)
+    :bind
+    ("C-x o" . switch-window)
+    ("C-x 1" . switch-window-then-maximize)
+    ("C-x 2" . dpy/split-and-follow-horizontally)
+    ("C-x 3" . dpy/split-and-follow-vertically)
+    ("C-x 0" . switch-window-then-delete))
+
+  ;; Another thing that bothers me; focus should follow new help windows:
+  (setq help-window-select t)
+
+  (message "Switch-window Completed")
+
+#+end_src
+** Undo Tree
+#+begin_src emacs-lisp
+  (use-package undo-tree
+    :init
+    (global-undo-tree-mode))
+#+end_src
+** Uniquify
+This package makes sure each buffer is uniquely named:
+#+begin_src emacs-lisp
+  (use-package uniquify
+    :init
+    (setq uniquify-buffer-name-style   'reverse
+          uniquify-separator            " . "
+          uniquify-after-kill-buffer-p    t
+          uniquify-ignore-buffers-re    "\\*"))
+
+  (message "Uniquify Completed")
+
+#+end_src
+** Which Key
+
+#+begin_src emacs-lisp
+  (use-package which-key
+    :config
+    (which-key-mode))
+  (message "Which-key Completed")
+#+end_src
+
+* Dired
+** Dired itself
+#+begin_src emacs-lisp
+  (use-package dired
+    :init
+    (let ((gls (executable-find "gls")))
+      (when gls (setq insert-directory-program gls)))
+    (setq dired-recursive-deletes 'top)
+    (setq direc-dwim-target t)
+    :bind (:map dired-mode-map
+                (([mouse-2] . dired-find-file)
+                 ("C-c C-p" . wdired-change-to-wdired-mode)))
+    :config
+    (put 'dired-find-alternate-file 'disabled nil))
+(message "Dired Completed")
+#+end_src
+** Diredfl
+This is a re-package of dired+ by Purcell. Simply makes for a more colorful dired:
+#+begin_src emacs-lisp
+  (use-package diredfl
+    :after dired
+    :hook
+    ((after-init . diredlf-global-mode)))
+(message "Diredfl Completed")
+#+end_src
+** Dired filter
+#+begin_src emacs-lisp
+  (use-package dired-filter
+    :after dired
+    :bind (:map dired-mode-map
+                ("/" . dired-filter-map))
+    :hook
+    ((dired-mode . dired-filter-mode)
+     (dired-mode . dired-filter-group-mode))
+    :init
+    (setq dired-filter-revert 'never
+            dired-filter-group-saved-groups
+            '(("default"
+               ("Git"
+                (directory . ".git")
+                (file . ".gitignore"))
+               ("Directory"
+                (directory))
+               ("PDF"
+                (extension . "pdf"))
+               ("LaTex"
+                (extension "tex" "bib"))
+               ("Source"
+                (extension "c" "cpp" "rb" "py" "r" "cs" "el" "lisp" "html" "js" "css" "go"))
+               ("Doc"
+                (extension "md" "rst" "txt"))
+               ("Org"
+                (extension . "org"))
+               ("Archives"
+                (extension "zip" "rar" "gz" "bz2" "tar"))
+               ("Images"
+                (extension "jpg" "JPG" "webp" "png" "PNG" "jpeg" "JPEG" "bmp" "BMP" "tiff" "TIFF" "gif" "GIF"))))))
+
+    (when (executable-find "avfsd")
+      (use-package dired-avfs))
+(message "Dired filter Completed")
+#+end_src
+
+** Dired Rainbow
+#+Begin_src emacs-lisp
+(use-package dired-rainbow
+    :after dired
+    :config
+    (dired-rainbow-define-chmod directory "#6cb2eb" "d.*")
+    (dired-rainbow-define html        "#eb5286" ("css" "less" "sass" "scss" "htm" "html" "jhtm" "mht" "eml" "mustache" "xhtml"))
+    (dired-rainbow-define xml         "#f2d024" ("xml" "xsd" "xsl" "xslt" "wsdl" "bib" "json" "msg" "pgn" "rss" "yaml" "yml" "rdata"))
+    (dired-rainbow-define document    "#9561e2" ("docm" "doc" "docx" "odb" "odt" "pdb" "pdf" "ps" "rtf" "djvu" "epub" "odp" "ppt" "pptx"))
+    (dired-rainbow-define markdown    "#ffed4a" ("org" "etx" "info" "markdown" "md" "mkd" "nfo" "pod" "rst" "tex" "textfile" "txt"))
+    (dired-rainbow-define database    "#6574cd" ("xlsx" "xls" "csv" "accdb" "db" "mdb" "sqlite" "nc"))
+    (dired-rainbow-define media       "#de751f" ("mp3" "mp4" "MP3" "MP4" "avi" "mpeg" "mpg" "flv" "ogg" "mov" "mid" "midi" "wav" "aiff" "flac"))
+    (dired-rainbow-define image       "#f66d9b" ("tiff" "tif" "cdr" "gif" "ico" "jpeg" "jpg" "png" "psd" "eps" "svg"))
+    (dired-rainbow-define log         "#c17d11" ("log"))
+    (dired-rainbow-define shell       "#f6993f" ("awk" "bash" "bat" "sed" "sh" "zsh" "vim"))
+    (dired-rainbow-define interpreted "#38c172" ("py" "ipynb" "rb" "pl" "t" "msql" "mysql" "pgsql" "sql" "r" "clj" "cljs" "scala" "js"))
+    (dired-rainbow-define compiled    "#4dc0b5" ("asm" "cl" "lisp" "el" "c" "h" "c++" "h++" "hpp" "hxx" "m" "cc" "cs" "cp" "cpp" "go" "f" "for" "ftn" "f90" "f95" "f03" "f08" "s" "rs" "hi" "hs" "pyc" ".java"))
+    (dired-rainbow-define executable  "#8cc4ff" ("exe" "msi"))
+    (dired-rainbow-define compressed  "#51d88a" ("7z" "zip" "bz2" "tgz" "txz" "gz" "xz" "z" "Z" "jar" "war" "ear" "rar" "sar" "xpi" "apk" "xz" "tar"))
+    (dired-rainbow-define packaged    "#faad63" ("deb" "rpm" "apk" "jad" "jar" "cab" "pak" "pk3" "vdf" "vpk" "bsp"))
+    (dired-rainbow-define encrypted   "#ffed4a" ("gpg" "pgp" "asc" "bfe" "enc" "signature" "sig" "p12" "pem"))
+    (dired-rainbow-define fonts       "#6cb2eb" ("afm" "fon" "fnt" "pfb" "pfm" "ttf" "otf"))
+    (dired-rainbow-define partition   "#e3342f" ("dmg" "iso" "bin" "nrg" "qcow" "toast" "vcd" "vmdk" "bak"))
+    (dired-rainbow-define vc          "#0074d9" ("git" "gitignore" "gitattributes" "gitmodules"))
+    (dired-rainbow-define-chmod executable-unix "#38c172" "-.*x.*"))
+(message "Dired Completed")
+#+End_src
+
+* Develolpment
+** Universal
+#+begin_src emacs-lisp
+  (setq-default indent-tabs-mode nil)
+  (global-font-lock-mode)
+  (setq font-lock-maximum-decoration t)
+#+end_src
+** Dash
+Dash is a large set of libraries usuable throughout Emacs
+#+begin_src emacs-lisp
+  (require 'dash)
+  (require 'dash-functional)
+  (message "Dash completed")
+#+end_src
+** Projectile
+Projectile is a project management package allowing you to see your whole project (i.e. java, go..) and move around in there more easily.
+#+begin_src emacs-lisp
+  (use-package projectile
+    :init (setq projectile-completion-system 'ivy)
+    :bind (:map projectile-mode-map
+                ("C-c p" . projectile-commmand-map))
+    :config
+    (projectile-global-mode))
+  (require 'projectile)
+  (message "Projectile Completed")
+#+end_src
+** Magit
+#+begin_src emacs-lisp
+  (use-package magit
+    :config
+    (setq git-commit-summary-max-length 50))
+  (message "Magit Completed")
+#+end_src
+** WS-Butler
+#+begin_src emacs-lisp
+  (use-package ws-butler
+    :init
+    (add-hook 'prog-mode-hook #'ws-butler-mode)
+    (add-hook 'text-mode-hook #'ws-butler-mode))
+  (message "WS-butler Completed")
+#+end_src
+** Paren Management
+#+begin_src emacs-lisp
+  (use-package smartparens
+    :init
+    (require 'smartparens-config)
+    :config
+    (setq sp-escape-quotes-after-insert t))
+
+  (setq show-paren-delay 0)
+  (show-paren-mode)
+
+  (require 'paren)
+  (set-face-background 'show-paren-match (face-background 'default))
+  (set-face-background 'show-paren-match "#32cd32")
+  (set-face-attribute 'show-paren-match nil :weight 'extra-bold)
+
+  (electric-indent-mode)
+  (electric-layout-mode)
+  (electric-pair-mode)
+  (setq electric-pair-preserve-balance             t
+        electric-pair-delete-adjacent-pairs        t
+        electric-pair-open-newline-between-pairs nil)
+
+  (message "Parens Completed")
+#+end_src
+** Highlighting
+#+begin_src emacs-lisp
+  (use-package highlight-numbers)
+  (add-hook 'prog-mode-hook 'highlight-numbers-mode)
+  (use-package highlight-escape-sequences)
+  (add-hook 'prog-mode-hook 'hes-mode)
+  (hes-mode)
+
+  (message "Highlighting Completed")
+#+end_src
+** Go
+#+begin_src emacs-lisp
+  (use-package go-mode-hook
+    :defer t
+    :mode ("\\.go\\'" . go-mode)
+    :init
+    (setq compile-command "echo Building... && go build -v && echo Testing... && go test -v && echo Linter... && golint")
+    (setq completion-read-command nil)
+    :bind (("<f9>" . compile)
+           ("M-." . godef-jump)))
+#+end_src
+** Company
+Need to load these so eglot can pick them up
+#+begin_src emacs-lisp
+  (use-package company
+    :diminish
+    :bind (("M-/"   . company-complete)
+           ("C-M-/" . company-files)
+           :map company-active-map
+           ("<tab>" . company-complete)
+           ("C-n"   . company-select-next)
+           ("C-p"   . company-select-previous))
+
+    :config
+    (global-company-mode 0)
+    (setq company-minimum-prefix-length 2
+          company-dabbrev-other-buffers t
+          company-dabbrev-code-other-buffers t
+          company-complete-number t
+          company-show-numbers t
+          company-selection-wrap-around t
+          company-dabbrev-downcase nil
+          company-dabbrev-ignore-case t
+          company-idle-delay 1))
+  (add-hook 'prog-mode-hook 'company-mode)
+(message "Company Completed")
+#+end_src
+** Flycheck
+#+begin_src emacs-lisp
+  (use-package flycheck
+    :config
+    (add-hook 'prog-mode-hook #'flycheck-mode))
+#+end_src
+** Language Server Protocol
+#+begin_src emacs-lisp
+  (use-package lsp-mode
+    :commands (lsp lsp-deferred)
+    :hook (go-mode . lsp-deferred))
+
+  ;; stolen from arenzana.org
+  (defun dpy/lsp-go-install-save-hooks()
+    (add-hook 'before-save-hook #'lsp-format-buffer t t)
+    (add-hook 'before-save-hook #'lsp-organize-imports t t))
+  (add-hook 'go-mode-hook #'dpy/lsp-go-install-save-hooks)
+
+  (use-package lsp-ui
+    :commands lsp-ui-mode
+    :init
+    )
+
+  ;; Company mode is a standard completion package that works well with lsp-mode.
+  ;; Company-lsp integrates company mode completion with lsp-mode.
+  ;; Completion-at-point also works out of the box but doesn't support snippets.
+
+  (use-package company-lsp
+    :commands company-lsp
+    :config
+    (push 'company-lsp comapny-backends))
+
+  ;; lsp-ui-doc-enable is false because I don't like the popover that shows up on the right
+  ;; I'll change it if I want it back
+
+  (setq lsp-ui-doc-enable t
+        lsp-ui-doc-max-height 8
+        lsp-ui-sideline-delay 2
+        lsp-ui-peek-enable t
+        lsp-ui-sideline-enable t
+        lsp-ui-imenu-enable t
+        lsp-ui-flycheck-enable t)
+
+
+  ;; (setq lsp-ui-doc-max-height 8)
+  ;; (setq lsp-ui-sideline-delay 2)
+  ;; (setq lsp-ui-sideline-show-code-actions nil)
+  ;; (setq lsp-ui-sideline-show-hover-nil)
+
+  (use-package lsp-ivy)
+
+
+  (message "LSP Completed")
+#+end_src
+* OrgMode
+** Variables
+#+begin_src emacs-lisp
+    (use-package org
+      :config
+      (setq-default org-src-fontify-natively)
+      (add-hook 'org-mode-hook '(lambda ()
+		;; make the lines in a buffer wrap around the edge of the sreen
+		(visual-line-mode)
+		(org-indent-mode)))
+  )
+(message "Org variables Completed")
+#+end_src
+** Structured Templates
+#+BEGIN_SRC emacs-lisp
+(require 'org-tempo)
+(add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+(message "Structured Templates Completed")
+#+END_SRC
+** Org-Bullets
+#+begin_src emacs-lisp
+(use-package org-bullets
+  :config
+  (setq org-ellipsis "⤵")
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+(message "Org Bullets Completed")
+#+end_src
+* End
+#+begin_src emacs-lisp
+(message "Everything Completed!")
+#+end_src

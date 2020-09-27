@@ -1,0 +1,1 @@
+("~/.emacs.d/" "~/.emacs.d_non_lsp/")

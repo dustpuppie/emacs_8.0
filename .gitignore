@@ -1,0 +1,7 @@
+config.el
+*.*~
+elpa/
+straight/
+url/
+var/auto-save/
+var/backup/
