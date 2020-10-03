@@ -22,6 +22,7 @@ that need to be loaded, and then use straight-use-package to maintain them
                              es-mode
                              exec-path-from-shell
                              flycheck
+                             flycheck-golangci-lint
                              gcmh
                              go-mode
                              highlight-numbers
@@ -740,46 +741,77 @@ Projectile is a project management package allowing you to see your whole projec
 #+end_src
 ** Go
 #+begin_src emacs-lisp
-  (use-package go-mode-hook
-    :defer t
+  (use-package go-mode
     :mode ("\\.go\\'" . go-mode)
     :init
     (setq compile-command "echo Building... && go build -v && echo Testing... && go test -v && echo Linter... && golint")
     (setq completion-read-command nil)
     :bind (("<f9>" . compile)
            ("M-." . godef-jump)))
+
+  (setq compilation-window-height 14)
+  (defun dpy/compilation-hook ()
+    (when (not (get-buffer-window "*compilation*"))
+      (save-selected-window
+        (save-excursion
+          (let* ((w (split-window-vertically))
+                 (h (window-height w)))
+            (select-window w)
+            (switch-to-buffer "*compilation*")
+            (shrink-window (- h compliation-window-height)))))))
+  (add-hook 'compilation-mode-hook 'dpy/compilation-hook)
+  (setq compilation-scroll-output t)
 #+end_src
 ** Company
 Need to load these so eglot can pick them up
 #+begin_src emacs-lisp
-  (use-package company
-    :diminish
-    :bind (("M-/"   . company-complete)
-           ("C-M-/" . company-files)
-           :map company-active-map
-           ("<tab>" . company-complete)
-           ("C-n"   . company-select-next)
-           ("C-p"   . company-select-previous))
+    (use-package company
+      :diminish
+      :bind (("M-/"   . company-complete)
+             ("C-M-/" . company-files)
+             :map company-active-map
+             ("<tab>" . company-complete)
+             ("C-n"   . company-select-next)
+             ("C-p"   . company-select-previous))
 
-    :config
-    (global-company-mode 0)
-    (setq company-minimum-prefix-length 2
-          company-dabbrev-other-buffers t
-          company-dabbrev-code-other-buffers t
-          company-complete-number t
-          company-show-numbers t
-          company-selection-wrap-around t
-          company-dabbrev-downcase nil
-          company-dabbrev-ignore-case t
-          company-idle-delay 1))
-  (add-hook 'prog-mode-hook 'company-mode)
-(message "Company Completed")
+      :config
+      (global-company-mode 0)
+      (setq company-minimum-prefix-length 2
+            company-dabbrev-other-buffers t
+            company-dabbrev-code-other-buffers t
+            company-complete-number t
+            company-show-numbers t
+            company-selection-wrap-around t
+            company-dabbrev-downcase nil
+            company-dabbrev-ignore-case t
+            company-idle-delay 1))
+    (add-hook 'prog-mode-hook 'company-mode)
+  (message "Company Completed")
 #+end_src
 ** Flycheck
 #+begin_src emacs-lisp
   (use-package flycheck
     :config
-    (add-hook 'prog-mode-hook #'flycheck-mode))
+    (add-hook 'prog-mode-hook #'flycheck-mode)
+
+    (flycheck-define-generic-checker 'lsp
+    "A syntax checker using the Language Server Protocol (LSP)
+  provided by lsp-mode
+  See https://github.com/emacs-lsp/lsp-mode."
+    :start #'lsp-diagnostics--flycheck-start
+    :modes '(lsp-placeholder-mode)  ;; placeholder
+    :predicate (lambda () lsp-mode)
+    :error-explainer (lambda (e)
+                       (cond ((string-prefix-p "clang-tidy" (flycheck-error-message e))
+                              (lsp-cpp-flycheck-clang-tidy-error-explainer e))
+                             (t (flycheck-error-message e))))))
+
+  ;; (use-package flycheck-golangci-lint
+  ;;   :hook (go-mode . flycheck-golangci-lint-setup)
+  ;;   :config
+  ;;   (flycheck-add-next-checker 'lsp 'golangci-lint)
+  ;;   )
+  (message "Flycheck Completed")
 #+end_src
 ** Language Server Protocol
 #+begin_src emacs-lisp
@@ -794,18 +826,16 @@ Need to load these so eglot can pick them up
   (add-hook 'go-mode-hook #'dpy/lsp-go-install-save-hooks)
 
   (use-package lsp-ui
-    :commands lsp-ui-mode
-    :init
-    )
+    :commands lsp-ui-mode)
 
   ;; Company mode is a standard completion package that works well with lsp-mode.
   ;; Company-lsp integrates company mode completion with lsp-mode.
   ;; Completion-at-point also works out of the box but doesn't support snippets.
 
-  (use-package company-lsp
-    :commands company-lsp
-    :config
-    (push 'company-lsp comapny-backends))
+  ;; (use-package company-lsp
+  ;;   :commands company-lsp
+  ;;   :config
+  ;;   (push 'company-lsp comapny-backends))
 
   ;; lsp-ui-doc-enable is false because I don't like the popover that shows up on the right
   ;; I'll change it if I want it back
@@ -818,11 +848,10 @@ Need to load these so eglot can pick them up
         lsp-ui-imenu-enable t
         lsp-ui-flycheck-enable t)
 
-
-  ;; (setq lsp-ui-doc-max-height 8)
-  ;; (setq lsp-ui-sideline-delay 2)
-  ;; (setq lsp-ui-sideline-show-code-actions nil)
-  ;; (setq lsp-ui-sideline-show-hover-nil)
+  (setq lsp-ui-doc-max-height 8)
+  (setq lsp-ui-sideline-delay 2)
+  (setq lsp-ui-sideline-show-code-actions nil)
+  (setq lsp-ui-sideline-show-hover nil)
 
   (use-package lsp-ivy)
 
