@@ -32,8 +32,8 @@ that need to be loaded, and then use straight-use-package to maintain them
                              ivy
                              ivy-rich
                              lsp-ivy
-                             lsp-mode
-                             lsp-ui
+;;                             lsp-mode
+;;                             lsp-ui
                              magit
                              no-littering
                              nimbus-theme
@@ -41,6 +41,7 @@ that need to be loaded, and then use straight-use-package to maintain them
                              org-bullets
                              projectile
                              ripgrep
+                             sdcv
                              smartparens
                              swiper
                              switch-window
@@ -720,9 +721,6 @@ Projectile is a project management package allowing you to see your whole projec
   (show-paren-mode)
 
   (require 'paren)
-  (set-face-background 'show-paren-match (face-background 'default))
-  (set-face-background 'show-paren-match "#32cd32")
-  (set-face-attribute 'show-paren-match nil :weight 'extra-bold)
 
   (electric-indent-mode)
   (electric-layout-mode)
@@ -744,35 +742,47 @@ Projectile is a project management package allowing you to see your whole projec
   (message "Highlighting Completed")
 #+end_src
 ** Go
-#+begin_src emacs-lisp
-  (use-package go-mode)
+- install go imports
+#+begin_src shell
+  go get golang.org/x/tools/cmd/goimports
+#+end_src
+- install godef
+#+begin_src shell
+  go get -v github.com/rogpeppe/godef
+#+end_src
+- install guru
+#+begin_src shell
+  go get -v golang.org/x/tools/cmd/guru
+#+end_src
 
-  (defun dpy/go-mode-setup ()
-    (go-eldoc-setup)
+#+begin_src emacs-lisp
+  (use-package go-mode
+    :config
     (setq gofmt-command "goimports")
     (add-hook 'before-save-hook 'gofmt-before-save)
     (local-set-key (kbd "M-,") 'godef-jump)
+    (local-set-key (kbd "<f9>") 'compile)
     (setq compile-command "echo Building... && go build -v && echo Testing... && go test -v && echo Linter... && golint")
-    (setq compilation-read-command nil)
-    (local-set-key (kbd "<f9>") 'compile))
+    )
 
-  (add-hook 'go-mode-hook 'dpy/go-mode-setup)
+  ;;    (go-eldoc-setup)
+  ;;    (setq compilation-read-command nil)
 
   ;; Configure golint
-  (add-to-list 'load-path (concat (getenv "GOPATH") "/src/github.com/golang/lint/misc/emacs"))
-  (require 'golint)
+  ;;  (add-to-list 'load-path (concat (getenv "GOPATH") "/src/github.com/golang/lint/misc/emacs"))
+  ;;  (require 'golint)
 
   ;; Smaller compilation buffer
-  (setq compilation-window-height 14)
-  (defun dpy/my-compilation-hook ()
-    (when (not (get-buffer-window "*compilation*"))
-      (save-selected-window
-        (save-excursion
-         (let* ((w (split-window-vertically))
-                (h (window-height w)))
-           (select-window w)
-           (switch-to-buffer "*compilation*")
-           (shrink-window (- h compilation-window-height)))))))
+    (setq compilation-window-height 14)
+    (defun dpy/my-compilation-hook ()
+      (when (not (get-buffer-window "*compilation*"))
+        (save-selected-window
+          (save-excursion
+           (let* ((w (split-window-vertically))
+                  (h (window-height w)))
+             (select-window w)
+             (switch-to-buffer "*compilation*")
+             (shrink-window (- h compilation-window-height)))))))
   (add-hook 'compilation-mode-hook 'dpy/my-compilation-hook)
 
 
@@ -828,6 +838,17 @@ Need to load these so eglot can pick them up
   ;;   (flycheck-add-next-checker 'lsp 'golangci-lint)
   ;;   )
   (message "Flycheck Completed")
+#+end_src
+** Eglot
+#+begin_src emacs-lisp
+  (use-package eglot
+    :hook
+    ((go-mode) . 'eglot-ensure)
+    ((python-mode . 'eglot-ensure)))
+#+end_src
+** SDCV Mode (Websters 1913 Dictionary
+#+begin_src emacs-lisp
+(use-package sdcv)
 #+end_src
 ** Language Server Protocol
 #+begin_src emacs-lisp
