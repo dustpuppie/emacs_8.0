@@ -27,14 +27,15 @@ that need to be loaded, and then use straight-use-package to maintain them
                              gcmh
                              go-eldoc
                              go-mode
+                             gruvbox-theme
                              highlight-numbers
                              highlight-escape-sequences
                              ivy
                              ivy-rich
+                             json-mode
                              lsp-ivy
-;;                             lsp-mode
-;;                             lsp-ui
                              magit
+                             multiple-cursors
                              no-littering
                              nimbus-theme
                              org
@@ -46,14 +47,15 @@ that need to be loaded, and then use straight-use-package to maintain them
                              swiper
                              switch-window
                              undo-tree
+                             vscode-dark-plus-theme
                              which-key
                              ws-butler
+                             yaml-mode
                              )
   )
   (dolist (p dpy-package-list)
     (straight-use-package p))
 #+END_SRC
-
 * Base Modifications
 These are modifications to base-emacs because, let's face it, emacs out of the box is pretty unusuable
 ** Personal Information
@@ -169,6 +171,9 @@ This is a package that helps with emacs' tendancy to splatter backup files and c
   (global-set-key (kbd "<f5>") 'mu4e)
   (global-set-key (kbd "RET") 'newline-and-indent)
   (global-set-key (kbd "C-c C-'") 'comment-or-uncomment-region)
+  (global-set-key (kbd "C->") 'mc/mark-next-like-this)
+  (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+  (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
 
   (message "Global Keys Completed")
 #+END_SRC
@@ -291,7 +296,14 @@ Like the weather, themes constantly change. Currently I'm fond of...
       (load-theme 'ample-flat t t)
       (load-theme 'ample-light t t)
       ;; choose one ample to enable
-      (enable-theme 'ample)))
+      ;; (enable-theme 'ample)
+      ))
+  ;; (use-package gruvbox-theme
+  ;;   :init
+  ;;   (load-theme 'gruvbox t))
+  (use-package vscode-dark-plus-theme
+    :init
+    (load-theme 'vscode-dark-plus t))
 
   (message "Themes Completed")
 #+end_src
@@ -349,7 +361,6 @@ A combonation of eye candy and functionality. Not sure where one starts, and the
     (add-hook 'org-mode-hook  #'prettify-symbols-mode)
 
   (message "Fonts Completed")
-
 #+end_src
 ** Delight
 Delight, Diminish, Minions kinda all serve the same purpose: ditch or minimize the impact of minor modes on the mode line:
@@ -376,7 +387,6 @@ Delight, Diminish, Minions kinda all serve the same purpose: ditch or minimize t
                (undo-tree-mode " 𝑢𝑑𝑡" undo-tree)
                (dashboard-mode nil dashboard)
                (which-key-mode nil which-key))))
-
   (message "Delight Completed")
 #+end_src
 ** Kill buffer
@@ -501,6 +511,10 @@ Beacon is an awesome itsy package that simply highlights the current row when yo
 
   (use-package avy
     :bind ("M-s" . avy-goto-char))
+#+end_src
+** Mulltiple cursors
+#+begin_src emacs-lisp
+  (use-package multiple-cursors)
 #+end_src
 ** Grep
 Use Ripgrep - best out there at this time
@@ -741,6 +755,56 @@ Projectile is a project management package allowing you to see your whole projec
 
   (message "Highlighting Completed")
 #+end_src
+** Company
+Need to load these so eglot can pick them up
+#+begin_src emacs-lisp
+    (use-package company
+      :diminish
+      :bind (("M-/"   . company-complete)
+             ("C-M-/" . company-files)
+             :map company-active-map
+             ("<tab>" . company-complete)
+             ("C-n"   . company-select-next)
+             ("C-p"   . company-select-previous))
+
+      :config
+      (global-company-mode 0)
+      (setq company-minimum-prefix-length 2
+            company-dabbrev-other-buffers t
+            company-dabbrev-code-other-buffers t
+            company-complete-number t
+            company-show-numbers t
+            company-selection-wrap-around t
+            company-dabbrev-downcase nil
+            company-dabbrev-ignore-case t
+            company-idle-delay 1))
+    (add-hook 'prog-mode-hook 'company-mode)
+  (message "Company Completed")
+#+end_src
+** Flycheck
+Still, IMHO the best all around linter
+#+begin_src emacs-lisp
+  (use-package flycheck
+    :config
+    (add-hook 'prog-mode-hook #'flycheck-mode))
+  (message "Flycheck Completed")
+#+end_src
+** Eglot
+Eglot - the more user friendly version of LSP
+#+begin_src emacs-lisp
+  (use-package eglot
+    :hook
+    ((go-mode) . 'eglot-ensure)
+    ((python-mode . 'eglot-ensure)))
+  (message "Eglot Completed")
+#+end_src
+** SDCV Mode (Websters 1913 Dictionary
+It's always good to have a dictionary. In this case, the old 1913 version. It has better use case examples.
+#+begin_src emacs-lisp
+(use-package sdcv)
+(message "SDCV Completed")
+#+end_src
+* Languages
 ** Go
 - install go imports
 #+begin_src shell
@@ -788,112 +852,38 @@ Projectile is a project management package allowing you to see your whole projec
 
 
 #+end_src
-** Company
-Need to load these so eglot can pick them up
+** JSON
 #+begin_src emacs-lisp
-    (use-package company
-      :diminish
-      :bind (("M-/"   . company-complete)
-             ("C-M-/" . company-files)
-             :map company-active-map
-             ("<tab>" . company-complete)
-             ("C-n"   . company-select-next)
-             ("C-p"   . company-select-previous))
-
-      :config
-      (global-company-mode 0)
-      (setq company-minimum-prefix-length 2
-            company-dabbrev-other-buffers t
-            company-dabbrev-code-other-buffers t
-            company-complete-number t
-            company-show-numbers t
-            company-selection-wrap-around t
-            company-dabbrev-downcase nil
-            company-dabbrev-ignore-case t
-            company-idle-delay 1))
-    (add-hook 'prog-mode-hook 'company-mode)
-  (message "Company Completed")
+  (use-package json-mode)
+  (message "JSON Completed")
 #+end_src
-** Flycheck
+** YAML
 #+begin_src emacs-lisp
-  (use-package flycheck
-    :config
-    (add-hook 'prog-mode-hook #'flycheck-mode))
-
-  ;;   (flycheck-define-generic-checker 'lsp
-  ;;   "A syntax checker using the Language Server Protocol (LSP)
-  ;; provided by lsp-mode
-  ;; See https://github.com/emacs-lsp/lsp-mode."
-  ;;   :start #'lsp-diagnostics--flycheck-start
-  ;;   :modes '(lsp-placeholder-mode)  ;; placeholder
-  ;;   :predicate (lambda () lsp-mode)
-  ;;   :error-explainer (lambda (e)
-  ;;                      (cond ((string-prefix-p "clang-tidy" (flycheck-error-message e))
-  ;;                             (lsp-cpp-flycheck-clang-tidy-error-explainer e))
-  ;;                            (t (flycheck-error-message e))))))
-
-  ;; (use-package flycheck-golangci-lint
-  ;;   :hook (go-mode . flycheck-golangci-lint-setup)
-  ;;   :config
-  ;;   (flycheck-add-next-checker 'lsp 'golangci-lint)
-  ;;   )
-  (message "Flycheck Completed")
+  (use-package yaml-mode)
+  (message "YAML Completed")
 #+end_src
-** Eglot
+** Python
 #+begin_src emacs-lisp
-  (use-package eglot
-    :hook
-    ((go-mode) . 'eglot-ensure)
-    ((python-mode . 'eglot-ensure)))
+  (add-hook 'python-mode-hook 'eglot-ensure)
 #+end_src
-** SDCV Mode (Websters 1913 Dictionary
+* Eshell
+
 #+begin_src emacs-lisp
-(use-package sdcv)
-#+end_src
-** Language Server Protocol
-#+begin_src emacs-lisp
-  ;; (use-package lsp-mode
-  ;;   :commands (lsp lsp-deferred)
-  ;;   :hook (go-mode . lsp-deferred))
+  (require 'eshell)
+  (defun dpy/new-eshell ()
+    "Opens `eshell' in a new window."
+    (interactive)
+    (let ((buf (eshell)))
+      (switch-to-buffer (other-buffer buf))
+      (switch-to-buffer-other-window buf)))
 
-  ;; ;; stolen from arenzana.org
-  ;; (defun dpy/lsp-go-install-save-hooks()
-  ;;   (add-hook 'before-save-hook #'lsp-format-buffer t t)
-  ;;   (add-hook 'before-save-hook #'lsp-organize-imports t t))
-  ;; (add-hook 'go-mode-hook #'dpy/lsp-go-install-save-hooks)
+  (defun dpy/kill-my-eshell ()
+    "Kills eshell window upon `exit'."
+    (when (not (one-window-p))
+      (delete-window)))
+  (advice-add 'eshell-life-is-too-much :after 'dpy/kill-my-eshell)
 
-  ;; (use-package lsp-ui
-  ;;   :commands lsp-ui-mode)
-
-  ;; Company mode is a standard completion package that works well with lsp-mode.
-  ;; Company-lsp integrates company mode completion with lsp-mode.
-  ;; Completion-at-point also works out of the box but doesn't support snippets.
-
-  ;; (use-package company-lsp
-  ;;   :commands company-lsp
-  ;;   :config
-  ;;   (push 'company-lsp comapny-backends))
-
-  ;; lsp-ui-doc-enable is false because I don't like the popover that shows up on the right
-  ;; I'll change it if I want it back
-
-  ;; (setq lsp-ui-doc-enable t
-  ;;       lsp-ui-doc-max-height 8
-  ;;       lsp-ui-sideline-delay 2
-  ;;       lsp-ui-peek-enable t
-  ;;       lsp-ui-sideline-enable t
-  ;;       lsp-ui-imenu-enable t
-  ;;       lsp-ui-flycheck-enable t)
-
-  ;; (setq lsp-ui-doc-max-height 8)
-  ;; (setq lsp-ui-sideline-delay 2)
-  ;; (setq lsp-ui-sideline-show-code-actions nil)
-  ;; (setq lsp-ui-sideline-show-hover nil)
-
-  ;; (use-package lsp-ivy)
-
-
-  ;; (message "LSP Completed")
+  (global-set-key (kbd "<f8>") 'dpy/new-eshell)
 #+end_src
 * OrgMode
 ** Variables
